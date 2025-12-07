@@ -25,7 +25,7 @@ class PaymentWaitingOverlay extends ConsumerStatefulWidget {
   ConsumerState<PaymentWaitingOverlay> createState() => _PaymentWaitingOverlayState();
 }
 class _PaymentWaitingOverlayState extends ConsumerState<PaymentWaitingOverlay>
-    with TickerProviderStateMixin {
+    with TickerProviderStateMixin, WidgetsBindingObserver {
   PaymentStep _currentStep = PaymentStep.cancelingOrders;
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
@@ -59,11 +59,14 @@ class _PaymentWaitingOverlayState extends ConsumerState<PaymentWaitingOverlay>
       parent: _pulseController,
       curve: Curves.easeInOut,
     ));
+
     _animationController.forward();
     _pulseController.repeat(reverse: true);
+    WidgetsBinding.instance.addObserver(this);
   }
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _paymentCheckTimer?.cancel();
     _animationController.dispose();
     _pulseController.dispose();
@@ -93,74 +96,81 @@ class _PaymentWaitingOverlayState extends ConsumerState<PaymentWaitingOverlay>
     }
   }
   void _startPaymentStatusCheck() {
-    _logger.debug('[PaymentWaiting] 开始定时检测支付状态，订单号: $_currentTradeNo');
+    _logger.info('[PaymentWaiting] 开始定时检测支付状态，订单号: $_currentTradeNo');
     _paymentCheckTimer?.cancel();
-    _paymentCheckTimer = Timer.periodic(const Duration(seconds: 5), (timer) async {
-      if (!mounted || _currentTradeNo == null) {
-        timer.cancel();
-        return;
-      }
-      try {
-        _logger.debug('[PaymentWaiting] ===== 开始检测支付状态 =====');
-        _logger.debug('[PaymentWaiting] 订单号: $_currentTradeNo');
-        
-        // 使用 SDK 检查订单状态
-        _logger.debug('[支付等待] 准备调用 SDK getOrders');
-        final orderModels = await XBoardSDK.instance.order.getOrders();
-        final orderData = orderModels.firstWhere(
-          (o) => o.tradeNo == _currentTradeNo,
-          orElse: () => const OrderModel(status: -1),
-        );
-        
-        _logger.debug('[PaymentWaiting] API 调用完成，结果: ${orderData.status != -1 ? '有数据' : '无数据'}');
-        
-        if (orderData.status != -1) {
-          _logger.debug('[PaymentWaiting] 订单详情 - 订单号: ${orderData.tradeNo}, 状态: ${orderData.status}');
-          // 检查订单状态
-          // 状态值: 0-等待中, 3-已完成, 其他-失败
-          if (orderData.status == 3) {
-            // 支付成功，立即执行成功回调
-            _logger.debug('[PaymentWaiting] ===== 检测到支付成功！状态: ${orderData.status} =====');
-            _logger.debug('[PaymentWaiting] 停止定时器');
-            timer.cancel();
-            if (mounted) {
-              _logger.debug('[PaymentWaiting] 组件仍然挂载，开始更新UI状态');
-              setState(() {
-                _currentStep = PaymentStep.paymentSuccess;
-              });
-              _logger.debug('[PaymentWaiting] UI状态已更新为: $_currentStep');
-              _pulseController.stop();
-              _logger.debug('[PaymentWaiting] 脉动动画已停止');
-              
-              // 立即执行成功回调，不等待3秒
-              if (widget.onPaymentSuccess != null) {
-                _logger.debug('[PaymentWaiting] 准备调用 onPaymentSuccess 回调');
-                widget.onPaymentSuccess?.call();
-                _logger.debug('[PaymentWaiting] onPaymentSuccess 回调已调用');
-              } else {
-                _logger.debug('[PaymentWaiting] 警告：onPaymentSuccess 回调为 null');
-              }
-            } else {
-              _logger.debug('[PaymentWaiting] 警告：组件已卸载，无法执行成功回调');
-            }
-          } else if (orderData.status == 0) {
-            // 仍在等待支付
-            _logger.debug('[PaymentWaiting] 支付仍在等待中...');
-          } else {
-            // 其他状态视为失败
-            _logger.debug('[PaymentWaiting] 支付失败，状态: ${orderData.status}');
-            timer.cancel();
-            if (mounted) {
-              widget.onClose?.call();
+    
+    // 立即执行一次检查
+    _checkPaymentStatus();
+    
+    _paymentCheckTimer = Timer.periodic(const Duration(seconds: 3), (timer) {
+      _checkPaymentStatus();
+    });
+  }
+
+  Future<void> _checkPaymentStatus() async {
+    if (!mounted || _currentTradeNo == null) {
+      _paymentCheckTimer?.cancel();
+      return;
+    }
+
+    try {
+      _logger.info('[PaymentWaiting] ===== 开始检测支付状态 =====');
+      _logger.info('[PaymentWaiting] 订单号: $_currentTradeNo');
+      
+      // 使用 SDK 检查订单状态
+      final orderModels = await XBoardSDK.instance.order.getOrders();
+      final orderData = orderModels.firstWhere(
+        (o) => o.tradeNo == _currentTradeNo,
+        orElse: () => const OrderModel(status: -1),
+      );
+      
+      _logger.info('[PaymentWaiting] API 调用完成，订单状态: ${orderData.status}');
+      
+      if (orderData.status != -1) {
+        // 检查订单状态
+        // 状态值: 0=待付款, 1=开通中, 2=已取消, 3=已完成, 4=已折抵
+        if (orderData.status == 3) {
+          // 支付成功，立即执行成功回调
+          _logger.info('[PaymentWaiting] ===== 检测到支付成功！状态: ${orderData.status} =====');
+          _paymentCheckTimer?.cancel();
+          if (mounted) {
+            setState(() {
+              _currentStep = PaymentStep.paymentSuccess;
+            });
+            _pulseController.stop();
+            
+            // 立即执行成功回调
+            if (widget.onPaymentSuccess != null) {
+              widget.onPaymentSuccess?.call();
             }
           }
+        } else if (orderData.status == 0 || orderData.status == 1) {
+          // 仍在等待支付 (0: 待付款, 1: 开通中)
+          _logger.info('[PaymentWaiting] 支付仍在等待中 (状态: ${orderData.status})...');
         } else {
-          _logger.debug('[PaymentWaiting] 获取订单状态失败：订单不存在');
+          // 其他状态视为失败 (2: 已取消, 4: 已折抵)
+          _logger.info('[PaymentWaiting] 支付视为失败/结束，状态: ${orderData.status}');
+          _paymentCheckTimer?.cancel();
+          if (mounted) {
+            widget.onClose?.call();
+          }
         }
-      } catch (e) {
-        _logger.debug('[PaymentWaiting] 检测支付状态异常: $e');
+      } else {
+        _logger.info('[PaymentWaiting] 获取订单状态失败：订单不存在');
       }
-    });
+    } catch (e) {
+      _logger.info('[PaymentWaiting] 检测支付状态异常: $e');
+    }
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _logger.info('[PaymentWaiting] 应用回到前台，立即检测支付状态');
+      if (_currentStep == PaymentStep.waitingPayment && _currentTradeNo != null) {
+        _checkPaymentStatus();
+      }
+    }
   }
   String _getStepTitle(PaymentStep step) {
     switch (step) {

@@ -385,23 +385,27 @@ class _PlanPurchasePageState extends ConsumerState<PlanPurchasePage> {
   }
 
   void _handlePaymentSuccess() {
-    _logger.debug('[支付成功] 处理支付成功回调');
-              try {
-                final userProvider = ref.read(xboardUserProvider.notifier);
-                userProvider.refreshSubscriptionInfoAfterPayment();
-              } catch (e) {
-      _logger.debug('[支付成功] 刷新订阅信息失败: $e');
-              }
+    _logger.info('[支付成功] 处理支付成功回调');
+    try {
+      final userProvider = ref.read(xboardUserProvider.notifier);
+      userProvider.refreshSubscriptionInfoAfterPayment();
+    } catch (e) {
+      _logger.info('[支付成功] 刷新订阅信息失败: $e');
+    }
 
-              Future.delayed(const Duration(milliseconds: 300), () {
-                if (mounted) {
-                  try {
-                    Navigator.of(context).popUntil((route) => route.isFirst);
-                  } catch (e) {
-          _logger.debug('[支付成功] 导航失败: $e');
-                  }
-                }
-              });
+    if (mounted) {
+      XBoardNotification.showSuccess(AppLocalizations.of(context).xboardPaymentSuccess);
+    }
+
+    Future.delayed(const Duration(milliseconds: 500), () {
+      if (mounted) {
+        try {
+          Navigator.of(context).popUntil((route) => route.isFirst);
+        } catch (e) {
+          _logger.info('[支付成功] 导航失败: $e');
+        }
+      }
+    });
   }
 
   Future<DomainPaymentMethod?> _selectPaymentMethod(

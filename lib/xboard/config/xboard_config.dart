@@ -204,30 +204,44 @@ class XBoardConfig {
   /// 获取第一个面板URL
   static String? get panelUrl => _accessor.getFirstPanelUrl();
 
+  // 缓存正在进行的竞速任务
+  static Future<String?>? _racingFuture;
+
   /// 并发竞速获取最快的面板URL
   /// 
   /// 对当前所有可用的面板URL进行并发测试，返回响应最快的URL
   /// 如果所有URL都失败，则返回null
   /// 注意：返回的URL会强制转换为HTTPS格式，以适配SDK的私有证书配置
   static Future<String?> getFastestPanelUrl() async {
+    // 如果已经有正在进行的竞速，直接返回该结果（请求合并）
+    if (_racingFuture != null) {
+      return _racingFuture;
+    }
+
     final panelUrls = allPanelUrls;
     if (panelUrls.isEmpty) return null;
     
     // 获取所有代理
     final proxyUrls = allProxyUrls;
 
-    final racingResult = await DomainRacingService.raceSelectFastestDomain(
+    // 创建新的竞速任务
+    _racingFuture = DomainRacingService.raceSelectFastestDomain(
       panelUrls,
       forceHttpsResult: true, // 强制返回HTTPS格式，适配SDK私有证书
       proxyUrls: proxyUrls,
-    );
-    
-    if (racingResult == null) return null;
-    
-    // 保存竞速结果
-    _lastRacingResult = racingResult;
-    
-    return racingResult.domain;
+    ).then((result) {
+      if (result != null) {
+        // 保存竞速结果
+        _lastRacingResult = result;
+        return result.domain;
+      }
+      return null;
+    }).whenComplete(() {
+      // 任务完成后清除缓存，允许下一次新的竞速
+      _racingFuture = null;
+    });
+
+    return _racingFuture;
   }
   
   /// 获取第一个代理URL

@@ -21,8 +21,14 @@ Future<XBoardSDK> xboardSdk(Ref ref) async {
     _logger.info('[XBoardSdkProvider] 开始初始化SDK');
     
     // 1. 域名竞速选择最快的URL
-    _logger.info('[XBoardSdkProvider] 开始域名竞速...');
-    final fastestUrl = await XBoardConfig.getFastestPanelUrl();
+    String? fastestUrl;
+    if (XBoardConfig.lastRacingResult?.domain != null) {
+      fastestUrl = XBoardConfig.lastRacingResult!.domain;
+      _logger.info('[XBoardSdkProvider] 使用缓存的竞速结果: $fastestUrl');
+    } else {
+      _logger.info('[XBoardSdkProvider] 开始域名竞速...');
+      fastestUrl = await XBoardConfig.getFastestPanelUrl();
+    }
     
     if (fastestUrl == null) {
       throw Exception('域名竞速失败：所有面板域名都无法连接');
