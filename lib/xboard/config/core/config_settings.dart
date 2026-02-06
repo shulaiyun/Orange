@@ -75,7 +75,13 @@ class RemoteConfigSettings {
   final Duration retryDelay;
 
   const RemoteConfigSettings({
-    this.sources = const [],
+    // 修改下面这一行
+    this.sources = const [
+      RemoteSourceConfig(
+        name: '树赖云', // 名字随便起
+        url: 'https://admin.shulaiyun.top/api/v1/client/app_config', // 注意：这里通常需要填返回 JSON 配置的 API 地址
+      )
+    ],
     this.maxRetries = 3,
     this.timeout = const Duration(seconds: 10),
     this.retryDelay = const Duration(seconds: 2),
