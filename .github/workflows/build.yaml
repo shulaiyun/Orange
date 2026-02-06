@@ -1,7 +1,7 @@
 name: build
 
 on:
-  workflow_dispatch: # 允许手动点按钮
+  workflow_dispatch:
   push:
     tags:
       - 'v*'
@@ -18,7 +18,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          submodules: recursive # 👈 关键：必须递归下载子模块，否则SDK会报错
+          submodules: recursive
+
+      # ✅ 自动修复文件缺失问题：把 example 配置文件复制一份变成真正的配置文件
+      # 这样 App 启动时就能找到文件，不会卡死了！
+      - name: Fix Config File
+        run: cp assets/config/xboard.config.example.yaml assets/config/xboard.config.yaml
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
@@ -29,16 +34,13 @@ jobs:
       - name: Get Flutter Dependency
         run: flutter pub get
 
-      # 👇 生成代码（这步不能省）
       - name: Generate Code
         run: dart run build_runner build --delete-conflicting-outputs
 
-      # 👇 核心修改：这里改成了 --debug
-      # 这样就绕过了烦人的签名证书，绝对不会报 key.properties 缺失的错
+      # ✅ 使用 Debug 模式打包，绕过签名报错
       - name: Build APK (Debug Mode)
         run: flutter build apk --debug --split-per-abi
 
-      # 上传打包好的文件
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
