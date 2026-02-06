@@ -99,8 +99,8 @@ flutter:
     - assets/fonts/
     - assets/images/
     - assets/images/avatars/
-    - assets/cer/
-    - assets/config/xboard.config.yaml
+   # - assets/cer/
+    - assets/config/xboard.config.example.yaml
   fonts:
     - family: JetBrainsMono
       fonts:
