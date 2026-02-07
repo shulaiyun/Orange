@@ -1,6 +1,5 @@
 name: build
 
-# 👇 这一行就是那个蓝色按钮的开关！
 on:
   workflow_dispatch:
   push:
@@ -19,9 +18,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          submodules: recursive
+          submodules: recursive  # 必须递归下载，否则 SDK 文件夹是空的
 
-      # 自动修复配置文件的名字，防止 App 卡死
+      # 修复配置文件名，防止 App 启动卡死
       - name: Fix Config File
         run: cp assets/config/xboard.config.example.yaml assets/config/xboard.config.yaml
 
@@ -31,13 +30,24 @@ jobs:
           channel: 'stable'
           cache: true
       
-      - name: Get Flutter Dependency
+      # 1. 先拉取主项目的依赖
+      - name: Get Main Dependencies
         run: flutter pub get
 
-      - name: Generate Code
+      # 2. 核心修复：进入 SDK 文件夹，专门给它生成代码！
+      # 之前的报错就是因为缺了这一步
+      - name: Generate SDK Code
+        run: |
+          cd lib/sdk/flutter_xboard_sdk
+          flutter pub get
+          dart run build_runner build --delete-conflicting-outputs
+          cd ../../..
+
+      # 3. 再回来给主项目生成代码
+      - name: Generate Main Code
         run: dart run build_runner build --delete-conflicting-outputs
 
-      # 使用 Debug 模式，无需签名证书
+      # 4. 开始打包 (Debug 模式，免签名)
       - name: Build APK (Debug Mode)
         run: flutter build apk --debug --split-per-abi
 
