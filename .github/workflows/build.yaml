@@ -1,5 +1,6 @@
 name: build
 
+# 👇 这一行就是那个蓝色按钮的开关！
 on:
   workflow_dispatch:
   push:
@@ -20,8 +21,7 @@ jobs:
         with:
           submodules: recursive
 
-      # ✅ 自动修复文件缺失问题：把 example 配置文件复制一份变成真正的配置文件
-      # 这样 App 启动时就能找到文件，不会卡死了！
+      # 自动修复配置文件的名字，防止 App 卡死
       - name: Fix Config File
         run: cp assets/config/xboard.config.example.yaml assets/config/xboard.config.yaml
 
@@ -37,7 +37,7 @@ jobs:
       - name: Generate Code
         run: dart run build_runner build --delete-conflicting-outputs
 
-      # ✅ 使用 Debug 模式打包，绕过签名报错
+      # 使用 Debug 模式，无需签名证书
       - name: Build APK (Debug Mode)
         run: flutter build apk --debug --split-per-abi
 
@@ -47,20 +47,3 @@ jobs:
           name: app-debug
           path: build/app/outputs/flutter-apk/*.apk
           overwrite: true
-
-  release:
-    needs: [ build ]
-    if: startsWith(github.ref, 'refs/tags/')
-    runs-on: ubuntu-latest
-    permissions: write-all
-    steps:
-      - name: Download Artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: app-debug
-          path: ./dist
-
-      - name: Release
-        uses: softprops/action-gh-release@v2
-        with:
-          files: ./dist/*
