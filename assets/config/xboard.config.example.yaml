@@ -1,20 +1,19 @@
-{
-    "panelType": "xboard",
-    "panels": {
-        "mihomo": [
-            {
-                "url": "https://admin.shulaiyun.top",
-                "description": "树赖加速器"
-            }
-        ]
-    },
-    "onlineSupport": [
-        {
-            "url": "https://admin.shulaiyun.top",
-            "description": "在线客服",
-            "apiBaseUrl": "https://admin.shulaiyun.top",
-            "wsBaseUrl": "wss://admin.shulaiyun.top"
-        }
-    ],
-    "proxy": []
-}
+xboard:
+  # 1. 这里的 mihomo 必须和上面 JSON 里的 "mihomo" 一模一样
+  provider: mihomo 
+  
+  remote_config:
+    sources:
+      - name: default_source
+        # 2. 这里填你 GitHub 那个 JSON 文件的【Raw 链接】
+        url: https://raw.githubusercontent.com/shulaiyun/Orange/main/assets/config/my_remote_config.json
+        priority: 100
+
+  app:
+    title: 树赖加速器
+    website: admin.shulaiyun.top
+
+  subscription:
+    prefer_encrypt: false
+    # 填你的通讯密钥
+    decrypt_key: 689789qqqqqqqq999
