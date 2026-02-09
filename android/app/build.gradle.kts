@@ -59,16 +59,16 @@ android {
         debug {
             isMinifyEnabled = false
             applicationIdSuffix = ".debug"
-            resValue("string", "app_name", "树赖加速器 Debug")
+            
+            // 👇 这一行是关键！强制覆盖应用名为“树赖加速器”
+            // 无论其他地方怎么写，这里权重最高
+            resValue("string", "app_name", "树赖加速器") 
         }
 
         release {
             isMinifyEnabled = true
             isDebuggable = false
-
-            // 强制使用 debug 签名，不使用 release 签名
             signingConfig = signingConfigs.getByName("debug")
-
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
