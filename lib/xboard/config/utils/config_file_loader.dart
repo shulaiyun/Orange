@@ -11,7 +11,7 @@ final _logger = FileLogger('config_file_loader.dart');
 /// 从 assets/config/xboard.config.yaml 加载 XBoard 配置
 class ConfigFileLoader {
   /// 配置文件路径
-  static const String configPath = 'assets/config/xboard.config.example.yaml';
+  static const String configPath = 'assets/config/xboard.config.yaml';
   
   /// 加载配置文件
   /// 
