@@ -59,6 +59,7 @@ android {
         debug {
             isMinifyEnabled = false
             applicationIdSuffix = ".debug"
+            resValue("string", "app_name", "树赖加速器 Debug")
         }
 
         release {
