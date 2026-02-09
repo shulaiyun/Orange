@@ -1,19 +1,26 @@
 xboard:
-  # 1. 这里的 mihomo 必须和上面 JSON 里的 "mihomo" 一模一样
-  provider: mihomo 
+  # 必须是 mihomo
+  provider: mihomo
   
   remote_config:
     sources:
       - name: default_source
-        # 2. 这里填你 GitHub 那个 JSON 文件的【Raw 链接】
-        url: https://raw.githubusercontent.com/shulaiyun/Orange/main/assets/config/my_remote_config.json
+        # 👇 填你刚才显示成功的那个链接！
+        url: https://app.shulaiyun.top/config.json
         priority: 100
 
   app:
     title: 树赖加速器
+    # 填你的面板域名
     website: admin.shulaiyun.top
-
+  
   subscription:
     prefer_encrypt: false
     # 填你的通讯密钥
     decrypt_key: 689789qqqqqqqq999
+
+  security:
+    obfuscation_prefix: "" 
+    user_agents:
+      api_encrypted: Mozilla/5.0 (compatible; XBoard-App/1.0)
+      domain_racing_test: FlClash/1.0 (Domain Racing Test)
